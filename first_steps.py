@@ -14,6 +14,7 @@ from rnn_theano import RNNTheano
 
 raw_text_path = 'full_trump_speech.txt'
 
+RETRAIN = False
 HIDDEN_DIM = 100 #  80
 LEARNING_RATE = 0.01
 N_EPOCH = 100 # 100
@@ -55,10 +56,9 @@ def train_with_sgd(model, X_train, y_train, learning_rate=0.005, nepoch=1, evalu
             num_examples_seen += 1
 
 
-########################################################################### main script
+########################################################################### get corpus
 
 print "reading datafile:  " + raw_text_path
-
 with open(raw_text_path,'rb') as f:
     print "nltk version: " + str(nltk.__version__)
 
@@ -110,28 +110,39 @@ for i, sent in enumerate(tokenized_sentences):
 X_train = numpy.asarray([[word_to_index[w] for w in sent[:-1]] for sent in tokenized_sentences])
 y_train = numpy.asarray([[word_to_index[w] for w in sent[1:]] for sent in tokenized_sentences])
 
+
+######################################################################## construct RNN
 print "constructing model..."
 model = RNNTheano(vocabulary_size, hidden_dim=HIDDEN_DIM)
 
-# run a single step to get a feel for training time
-print "run a single step..."
-t1 = time.time()
-model.sgd_step(X_train[10], y_train[10], LEARNING_RATE)
-t2 = time.time()
-print "SGD Step time: %f milliseconds" % ((t2 - t1) * 1000.)
+######################################################################## train
 
-#print " loading model parameters..."
-#if MODEL_FILE != None:
-#    load_model_parameters_theano(MODEL_FILE, model)
+if RETRAIN:
+    # run a single step to get a feel for training time
+    print "run a single step..."
+    t1 = time.time()
+    model.sgd_step(X_train[10], y_train[10], LEARNING_RATE)
+    t2 = time.time()
+    print "SGD Step time: %f milliseconds" % ((t2 - t1) * 1000.)
 
-print "training..."
-train_with_sgd(model, X_train, y_train, nepoch=N_EPOCH, learning_rate=LEARNING_RATE)
+    #print " loading model parameters..."
+    #if MODEL_FILE != None:
+    #    load_model_parameters_theano(MODEL_FILE, model)
 
+    print "training..."
+    train_with_sgd(model, X_train, y_train, nepoch=N_EPOCH, learning_rate=LEARNING_RATE)
 
+####################################################################### if no train, load prior model
+else:
+    # todo load model
+    MODEL_FILE = 'data/rnn-theano-100-2000-2017-08-31-11-33-30.npz'
+    print "constructing model..."
+    model = RNNTheano(vocabulary_size, hidden_dim=HIDDEN_DIM) # re-init from scratch
+    load_model_parameters_theano(MODEL_FILE, model)
 
+############################################################################## helper function
 
-
-def generate_sentence(model):
+def generate_sentence_deprecated(model):
     # We start the sentence with the start token
     new_sentence = [word_to_index[sentence_start_token]]
     # Repeat until we get an end token
@@ -146,16 +157,26 @@ def generate_sentence(model):
     sentence_str = [index_to_word[x] for x in new_sentence[1:-1]]
     return sentence_str
 
-############# testing
+def generate_sentence(model):
 
-# todo load model
-#MODEL_FILE = 'data/rnn-theano-10-150-2017-08-30-17-10-19.npz' # sample trained model
-#print "constructing model..."
-#model = RNNTheano(vocabulary_size, hidden_dim=HIDDEN_DIM) # re-init from scratch
-#load_model_parameters_theano(MODEL_FILE, model)
+    new_sentence = [word_to_index[sentence_start_token]] # start with start token
+
+    while not new_sentence[-1] == word_to_index[sentence_end_token]: # sample until we get an end token
+        next_word_probs = model.forward_propagation(new_sentence)
+        #sampled_word = word_to_index[unknown_token]
+        # We don't want to sample unknown words
+        #while sampled_word == word_to_index[unknown_token]:
+        samples = np.random.multinomial(1, next_word_probs[-1])
+        sampled_word = np.argmax(samples)
+        new_sentence.append(sampled_word)
+    sentence_str = [index_to_word[x] for x in new_sentence[1:-1]]
+    return sentence_str
+
+############################################################## generate some sentences
+
 
 num_sentences = 10
-senten_min_length = 7
+senten_min_length = 3
 
 for i in range(num_sentences):
     sent = []
