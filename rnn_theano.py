@@ -34,7 +34,7 @@ class RNNTheano:
             s_t = T.tanh(U[:,x_t] + W.dot(s_t_prev))
             o_t = T.nnet.softmax(V.dot(s_t))
             return [o_t[0], s_t]
-        [o,s], updates = theano.scan(
+        [o,s], updates = theano.scan( # iteratively run the propagation step
             forward_prop_step,
             sequences=x,
             outputs_info=[None, dict(initial=T.zeros(self.hidden_dim))],
@@ -45,10 +45,17 @@ class RNNTheano:
         prediction = T.argmax(o, axis=1)
         o_error = T.sum(T.nnet.categorical_crossentropy(o, y))
 
+        # prior gradients (going to need this for for conjugate gradient descent)
+        #dU_previous = dU
+        #dV_previous = dV
+        #dW_previous = dW
+
         # Gradients
         dU = T.grad(o_error, U)
         dV = T.grad(o_error, V)
         dW = T.grad(o_error, W)
+
+
 
         # Assign functions
         self.forward_propagation = theano.function([x], o)
@@ -81,6 +88,8 @@ def gradient_check_theano(model, x, y, h=0.001, error_threshold=0.01):
     model_parameters = ['U', 'V', 'W']
     # Gradient check for each parameter
     for pidx, pname in enumerate(model_parameters):
+        print model_parameters
+        print pidx, pname
         # Get the actual parameter value from the mode, e.g. model.W
         parameter_T = operator.attrgetter(pname)(model)
         parameter = parameter_T.get_value()
@@ -94,15 +103,19 @@ def gradient_check_theano(model, x, y, h=0.001, error_threshold=0.01):
             # Estimate the gradient using (f(x+h) - f(x-h))/(2*h)
             parameter[ix] = original_value + h
             parameter_T.set_value(parameter)
-            gradplus = model.calculate_total_loss([x],[y])
+            gradplus = model.calculate_total_loss([x],[y])  # first point
+
             parameter[ix] = original_value - h
             parameter_T.set_value(parameter)
-            gradminus = model.calculate_total_loss([x],[y])
-            estimated_gradient = (gradplus - gradminus)/(2*h)
+            gradminus = model.calculate_total_loss([x],[y])    # second point
+
+            estimated_gradient = (gradplus - gradminus)/(2*h) # estimate
+
             parameter[ix] = original_value
             parameter_T.set_value(parameter)
             # The gradient for this parameter calculated using backpropagation
             backprop_gradient = bptt_gradients[pidx][ix]
+            print np.log(backprop_gradient)
             # calculate The relative error: (|x - y|/(|x| + |y|))
             relative_error = np.abs(backprop_gradient - estimated_gradient)/(np.abs(backprop_gradient) + np.abs(estimated_gradient))
             # If the error is to large fail the gradient check
@@ -113,6 +126,5 @@ def gradient_check_theano(model, x, y, h=0.001, error_threshold=0.01):
                 print "Estimated_gradient: %f" % estimated_gradient
                 print "Backpropagation gradient: %f" % backprop_gradient
                 print "Relative Error: %f" % relative_error
-                return
             it.iternext()
         print "Gradient check for parameter %s passed." % (pname)
