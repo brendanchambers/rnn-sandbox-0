@@ -13,7 +13,8 @@ from rnn_theano import RNNTheano, gradient_check_theano
 
 
 #raw_text_path = 'full_trump_speech.txt'
-raw_text_path = 'data/trump_campaign_speeches.txt'
+raw_text_path = 'data/full_trump_speech.txt'
+CORPUS_ENCODING = 'utf-16'
 
 RETRAIN = True
 HIDDEN_DIM = 2 #  80
@@ -67,7 +68,7 @@ with open(raw_text_path,'rb') as f:
     file_contents = f.read()
     #file_contents = file_contents.lower() # might not want to do this yet right? because sent_tokenize is smart
     # todo ignore "Trump:" ignore "[applause]"
-    raw_sentences = file_contents.rstrip("\n").decode("utf-8")
+    raw_sentences = file_contents.rstrip("\n").decode(CORPUS_ENCODING)
 print "tokenizing sentences..."
 sentences = nltk.sent_tokenize(raw_sentences)
 print np.shape(raw_sentences)
@@ -121,7 +122,7 @@ y_train = numpy.asarray([[word_to_index[w] for w in sent[1:]] for sent in tokeni
 
 
 ######################################################################## construct RNN
-print "constructing model..."
+print "constructing model..."  # todo try a smarter initialization - wrt vanishing gradients
 model = RNNTheano(vocabulary_size, hidden_dim=HIDDEN_DIM)
 
 gradient_check_theano(model, X_train[10], y_train[10], h=0.0000001, error_threshold=0.01)
