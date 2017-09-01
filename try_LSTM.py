@@ -23,9 +23,9 @@ CORPUS_ENCODING = 'utf-16'
 RETRAIN = True
 HIDDEN_DIM = 100 #  80
 LEARNING_RATE = 0.001 # 0.005
-N_EPOCH = 30 # 100
+N_EPOCH = 250 # 100
 BATCH_SIZE = 50
-MODEL_FILE = 'data/rnn-theano-100-2000-2017-09-01-14-43-41.npz'  # if no retrain, load these parameters
+MODEL_FILE = 'data/gru-theano-100-2000-2017-09-01-16-05-47.npz'  # if no retrain, load these parameters
 
 
 vocabulary_size = 2000
