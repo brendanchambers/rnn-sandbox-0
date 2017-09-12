@@ -4,7 +4,6 @@ __author__ = 'Brendan'
 from keras.layers import Input, Dense
 from keras.models import Model
 from keras.datasets import mnist
-from keras import regularizers
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.models import load_model
@@ -15,8 +14,7 @@ encoding_dim = 32 # number of floats
 
 input_img = Input(shape=(784,)) # init
 # encode
-encoded = Dense(encoding_dim, activation='relu',
-                activity_regularizer=regularizers.l1(10e-5))(input_img)
+encoded = Dense(encoding_dim, activation='relu')(input_img)
 # decode
 decoded = Dense(784, activation='sigmoid')(encoded)
 
@@ -44,7 +42,7 @@ print x_test.shape
 
 # train 50x
 autoencoder.fit(x_train,x_train,
-                epochs=100,
+                epochs=10,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(x_test,x_test))
