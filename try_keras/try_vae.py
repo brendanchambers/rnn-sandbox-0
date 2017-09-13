@@ -15,12 +15,13 @@ from keras.models import load_model
 from keras import backend as K
 from scipy.stats import norm
 from keras import objectives
+import time
 
-batch_size=100
+batch_size=2000
 original_dim=784
 latent_dim=2
 intermediate_dim=256
-epochs=2
+epochs=3
 epsilon_std=1.0
 
 x = Input(batch_shape=(batch_size, original_dim))
@@ -106,7 +107,7 @@ _x_decoded_mean = decoder_mean(_h_decoded)
 generator = Model(decoder_input, _x_decoded_mean)
 
 # display a 2D manifold of the digits
-n = 15  # figure with 15x15 digits
+n = 10  # figure with 15x15 digits
 digit_size = 28
 figure = np.zeros((digit_size * n, digit_size * n))
 # linearly spaced coordinates on the unit square were transformed through the inverse CDF (ppf) of the Gaussian
@@ -129,3 +130,26 @@ plt.show()
 vae.save('vae_autoencoder.h5')
 encoder.save('vae_encoder.h5')
 generator.save('vae_generator.h5')
+
+
+fig = plt.figure()
+
+# linearly spaced coordinates on the unit square were transformed through the inverse CDF (ppf) of the Gaussian
+# to produce values of the latent variables z, since the prior of the latent space is Gaussian
+grid_x = norm.ppf(np.linspace(0.05, 0.95, n))
+grid_y = norm.ppf(np.linspace(0.05, 0.95, n))
+
+for i, yi in enumerate(grid_x):
+    for j, xi in enumerate(grid_y):
+        z_sample = np.array([[xi, yi]])
+        x_decoded = generator.predict(z_sample)
+
+        digit = x_decoded[0].reshape(digit_size, digit_size)
+        print np.shape(digit)
+        #figure[i * digit_size: (i + 1) * digit_size,
+        #       j * digit_size: (j + 1) * digit_size] = digit
+        plt.imshow(digit)
+
+        plt.pause(0.001)
+
+plt.show()
